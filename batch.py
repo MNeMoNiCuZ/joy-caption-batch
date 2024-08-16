@@ -8,6 +8,9 @@ import torch
 import torch.amp.autocast_mode
 from PIL import Image
 import os
+from tqdm import tqdm  # Import tqdm for the progress bar
+
+print("Captioning Batch Images Initializing...")
 
 # Specify input and output folder paths
 INPUT_FOLDER = Path(__file__).parent / "input"
@@ -118,12 +121,14 @@ def process_image(input_image_path: Path):
     return caption.strip()
 
 # Process all images in the input folder
+print("Captioning Initializing")
 image_files = list(INPUT_FOLDER.glob('*'))
 print(f"Found {len(image_files)} files in {INPUT_FOLDER}")
 
 processed = False
 
-for image_path in image_files:
+# Use tqdm to add a progress bar
+for image_path in tqdm(image_files, desc="Processing images"):
     print(f"Found file: {image_path.resolve()}")
     if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
         print(f"Processing {image_path.resolve()}")
