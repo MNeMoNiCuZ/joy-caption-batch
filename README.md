@@ -9,6 +9,14 @@ Place all images you wish to caption in the /input directory and run `py batch.p
 3. (Optional) Create a virtual environment for your setup. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
 5. Run `pip install -r requirements.txt`
 6. Install [PyTorch with CUDA support](https://pytorch.org/)
+7. Go to the [Meta-Llama-3.1-8B huggingface page](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) and request access to this gated model.
+8. Wait for the access to be granted (usually within an hour).
+9. Go to the [Github Settings > Tokens page](https://huggingface.co/settings/tokens), and click "Create new token".
+10. Give it `Read` access, and give it a name. `Joy-caption-token` or any name you want.
+11. Save the token code you are given in a file or email somewhere safe. You cannot retrieve it later, but you can disable it and create a new one at any time.
+12. Run the following command `huggingface-cli login`, in your (venv). Paste your password when asked (password text won't be visible).
+
+You should now be set up and able to run the tool.
 
 # Requirements
 
