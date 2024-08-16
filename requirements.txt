@@ -5,3 +5,4 @@ transformers==4.43.3
 sentencepiece
 spaces
 protobuf
+tqdm
