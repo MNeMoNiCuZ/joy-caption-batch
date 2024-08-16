@@ -1,7 +1,7 @@
 # Joytag Caption - Batch
 This tool utilizes the Joytag Caption tool (still in Pre-Alpha), to caption image files in a batch.
 
-Simply place all images you wish to caption in the /input directory and run `py batch.py`.
+Place all images you wish to caption in the /input directory and run `py batch.py`.
 
 # Setup
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
