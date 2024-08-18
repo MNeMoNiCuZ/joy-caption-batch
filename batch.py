@@ -115,7 +115,7 @@ def process_image(input_image_path: Path):
     # Save caption to text file
     output_file_path = OUTPUT_FOLDER / (input_image_path.stem + ".txt")
     print(f"Saving caption to {output_file_path}")
-    with open(output_file_path, 'w') as f:
+    with open(output_file_path, 'w', encoding='utf-8') as f:
         f.write(caption.strip())
 
     return caption.strip()
@@ -130,7 +130,7 @@ processed = False
 # Use tqdm to add a progress bar
 for image_path in tqdm(image_files, desc="Processing images"):
     print(f"Found file: {image_path.resolve()}")
-    if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif']:
+    if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp']:
         print(f"Processing {image_path.resolve()}")
         caption = process_image(image_path)
         print(f"Caption for {image_path.name}: {caption}")
