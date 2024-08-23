@@ -2,13 +2,24 @@ import spaces
 import gradio as gr
 from huggingface_hub import InferenceClient
 from torch import nn
-from transformers import AutoModel, AutoProcessor, AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast, AutoModelForCausalLM
+from transformers import AutoModel, AutoProcessor, AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast, AutoModelForCausalLM, logging as transformers_logging
 from pathlib import Path
 import torch
 import torch.amp.autocast_mode
 from PIL import Image
 import os
 from tqdm import tqdm  # Import tqdm for the progress bar
+
+# Configuration options
+PRINT_CAPTIONS = True  # Option to print captions to the console
+PRINT_CAPTIONING_STATUS = False  # Option to print captioning file status to the console
+OVERWRITE = False  # Boolean option to allow overwriting existing caption files
+PREPEND_STRING = ""  # Prefix string to prepend to the generated caption
+APPEND_STRING = ""  # Suffix string to append to the generated caption
+
+# Suppress warnings if PRINT_CAPTIONING_STATUS is False
+if not PRINT_CAPTIONING_STATUS:
+    transformers_logging.set_verbosity_error()
 
 print("Captioning Batch Images Initializing...")
 
@@ -24,6 +35,7 @@ TITLE = "<h1><center>JoyCaption Pre-Alpha (2024-07-30a)</center></h1>"
 
 HF_TOKEN = os.environ.get("HF_TOKEN", None)
 
+# Class definition for ImageAdapter
 class ImageAdapter(nn.Module):
     def __init__(self, input_features: int, output_features: int):
         super().__init__()
@@ -37,7 +49,29 @@ class ImageAdapter(nn.Module):
         x = self.linear2(x)
         return x
 
-# Load CLIP
+# Process all images in the input folder recursively
+print("Captioning Initializing")
+image_files = list(INPUT_FOLDER.rglob('*'))
+
+# Filter the list based on the Overwrite flag
+if not OVERWRITE:
+    image_files = [
+        image_path for image_path in image_files
+        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp'] and not (image_path.parent / (image_path.stem + ".txt")).exists()
+    ]
+else:
+    image_files = [
+        image_path for image_path in image_files
+        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp']
+    ]
+
+print(f"Found {len(image_files)} files to process in {INPUT_FOLDER}")
+
+if not image_files:
+    print("No images to process. Exiting...")
+    exit(0)  # Exit the script if there are no images to process
+
+# Load CLIP, model, and other resources only if there are images to process
 print("Loading CLIP")
 clip_processor = AutoProcessor.from_pretrained(CLIP_PATH)
 clip_model = AutoModel.from_pretrained(CLIP_PATH)
@@ -110,33 +144,35 @@ def process_image(input_image_path: Path):
     if generate_ids[0][-1] == tokenizer.eos_token_id:
         generate_ids = generate_ids[:, :-1]
 
-    caption = tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]
+    # Prepend/Append strings to the generated caption
+    caption = f"{PREPEND_STRING}{tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]}{APPEND_STRING}"
 
-    # Save caption to text file
-    output_file_path = OUTPUT_FOLDER / (input_image_path.stem + ".txt")
-    print(f"Saving caption to {output_file_path}")
+    # Save caption to text file in the same directory as the image
+    output_file_path = input_image_path.parent / (input_image_path.stem + ".txt")
+
+    if output_file_path.exists() and not OVERWRITE:
+        if PRINT_CAPTIONING_STATUS:
+            print(f"Skipping {output_file_path} as it already exists.")
+        return
+
+    if PRINT_CAPTIONING_STATUS:
+        print(f"Saving caption to {output_file_path}")
     with open(output_file_path, 'w', encoding='utf-8') as f:
         f.write(caption.strip())
 
-    return caption.strip()
+    if PRINT_CAPTIONS:
+        print(f"Caption for {input_image_path.name}: {caption}")
 
-# Process all images in the input folder
-print("Captioning Initializing")
-image_files = list(INPUT_FOLDER.glob('*'))
-print(f"Found {len(image_files)} files in {INPUT_FOLDER}")
+    return caption.strip()
 
 processed = False
 
 # Use tqdm to add a progress bar
 for image_path in tqdm(image_files, desc="Processing images"):
-    print(f"Found file: {image_path.resolve()}")
-    if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp']:
-        print(f"Processing {image_path.resolve()}")
-        caption = process_image(image_path)
-        print(f"Caption for {image_path.name}: {caption}")
-        processed = True
-    else:
-        print(f"Skipping {image_path.name}, unsupported file type.")
+    if PRINT_CAPTIONING_STATUS:
+        print(f"Found file: {image_path.resolve()}")
+    caption = process_image(image_path)
+    processed = True
 
 if not processed:
     print("No images processed. Ensure the folder contains supported image formats.")
