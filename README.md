@@ -3,6 +3,8 @@ This tool utilizes the Joytag Caption tool (still in Pre-Alpha), to caption imag
 
 Place all images you wish to caption in the /input directory and run `py batch.py`.
 
+Support for an `--img_dir` argument added by [CambridgeComputing](https://github.com/CambridgeComputing) It lets you specify a directory other than ./input. If no arguments are provided by the user, the script still defaults to the ./input subdirectory.
+
 # Setup
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
 2. Download the [image_adapter.pt](https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha/tree/main/wpkklhc6) and place it in the `wpkklhc6` directory.
