@@ -9,6 +9,16 @@ import torch.amp.autocast_mode
 from PIL import Image
 import os
 from tqdm import tqdm  # Import tqdm for the progress bar
+import argparse
+
+# Create the parser
+parser = argparse.ArgumentParser(description="Batch Joy Caption processing")
+
+# Add an argument
+parser.add_argument('--img_dir', type=str, help='Path to the image input directory')
+
+# Parse the argument
+args = parser.parse_args()
 
 # Configuration options
 PRINT_CAPTIONS = True  # Option to print captions to the console
@@ -24,9 +34,9 @@ if not PRINT_CAPTIONING_STATUS:
 print("Captioning Batch Images Initializing...")
 
 # Specify input and output folder paths
-INPUT_FOLDER = Path(__file__).parent / "input"
+# Check if an input folder was provided, if not, use the default
+INPUT_FOLDER = Path(args.img_dir) if args.img_dir else Path(__file__).parent / "input"
 OUTPUT_FOLDER = INPUT_FOLDER
-
 CLIP_PATH = "google/siglip-so400m-patch14-384"
 VLM_PROMPT = "A descriptive caption for this image:\n"
 MODEL_PATH = "meta-llama/Meta-Llama-3.1-8B"
