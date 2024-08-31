@@ -39,7 +39,13 @@ The sky is a brilliant blue, dotted with fluffy white clouds, and the light is s
 ![Woman](https://github.com/user-attachments/assets/6a22d1b5-8a28-42ea-a330-2886ab009aaf)
 
 
-
-
 # Run the original online
 Original app and source on huggingface: [https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha](https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha)
+
+
+# Known issues
+## Not using the right GPU?
+You may need to set the CUDA device to GPU 0 os.environ["CUDA_VISIBLE_DEVICES"] = "0" in the code.
+
+## Too slow?
+You may want to run the model in a quantized mode.
