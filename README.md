@@ -16,7 +16,7 @@ Support for an `--img_dir` argument added by [CambridgeComputing](https://github
 9. Go to the [Github Settings > Tokens page](https://huggingface.co/settings/tokens), and click "Create new token".
 10. Give it `Read` access, and give it a name. `Joy-caption-token` or any name you want.
 11. Save the token code you are given in a file or email somewhere safe. You cannot retrieve it later, but you can disable it and create a new one at any time.
-12. Run the following command `huggingface-cli login`, in your (venv). Paste your password when asked (password text won't be visible).
+12. Run the following command `huggingface-cli login`, in your (venv). Paste your password when asked by right-clicking and pasting. CTRL + V does not seem to work.
 
 You should now be set up and able to run the tool.
 
