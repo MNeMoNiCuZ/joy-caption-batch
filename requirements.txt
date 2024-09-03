@@ -6,3 +6,4 @@ sentencepiece
 spaces
 protobuf
 tqdm
+bitsandbytes
