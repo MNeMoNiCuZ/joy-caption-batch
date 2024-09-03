@@ -39,4 +39,4 @@ Original app and source on huggingface: [https://huggingface.co/spaces/fancyfeas
 You may need to set the CUDA device to GPU 0 os.environ["CUDA_VISIBLE_DEVICES"] = "0" in the code.
 
 ## Too slow?
-You may want to run the model in a quantized mode.
+You may want to run the model in Low VRAM mode: Set `LOW_VRAM_MODE=true` in batch.py
