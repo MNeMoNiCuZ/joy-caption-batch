@@ -7,24 +7,15 @@ Support for an `--img_dir` argument added by [CambridgeComputing](https://github
 
 # Setup
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
-2. Download the [image_adapter.pt](https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha/tree/main/wpkklhc6) and place it in the `wpkklhc6` directory.
-3. (Optional) Create a virtual environment for your setup. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
-5. Run `pip install -r requirements.txt`
-6. Install [PyTorch with CUDA support](https://pytorch.org/)
-7. Go to the [Meta-Llama-3.1-8B huggingface page](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) and request access to this gated model.
-8. Wait for the access to be granted (usually within an hour).
-9. Go to the [Github Settings > Tokens page](https://huggingface.co/settings/tokens), and click "Create new token".
-10. Give it `Read` access, and give it a name. `Joy-caption-token` or any name you want.
-11. Save the token code you are given in a file or email somewhere safe. You cannot retrieve it later, but you can disable it and create a new one at any time.
-12. Run the following command `huggingface-cli login`, in your (venv). Paste your password when asked by right-clicking and pasting. CTRL + V does not seem to work.
+2. (Optional) Create a virtual environment for your setup. Use python 3.9 to 3.11. Do not use 3.12. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
+3. Run `pip install -r requirements.txt` (this is done automatically with the `venv_create.bat`).
+4. Install [PyTorch with CUDA support](https://pytorch.org/) matching your installed CUDA version. Run `nvcc --version` to find out which CUDA is your default.
 
 You should now be set up and able to run the tool.
 
 # Requirements
-
-- Tested on Python 3.10 and 3.12.
+- Tested on Python 3.10 and 3.11.
 - Tested on Pytorch w. CUDA 12.1.
-- Should also work on other versions.
 
 # Example
 ![put_images_here](https://github.com/user-attachments/assets/a24251e5-6df6-44d4-a231-b74da9fcd8ca)
