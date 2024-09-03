@@ -5,6 +5,8 @@ Place all images you wish to caption in the /input directory and run `py batch.p
 
 Support for an `--img_dir` argument added by [CambridgeComputing](https://github.com/CambridgeComputing) It lets you specify a directory other than ./input. If no arguments are provided by the user, the script still defaults to the ./input subdirectory.
 
+Now supports `LOW_VRAM_MODE=true`. This will use a [llama3-8b-bnb-4bit quantized version from unsloth](https://huggingface.co/unsloth/llama-3-8b-bnb-4bit)
+
 # Setup
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
 2. (Optional) Create a virtual environment for your setup. Use python 3.9 to 3.11. Do not use 3.12. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
