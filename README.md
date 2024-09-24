@@ -19,6 +19,9 @@ You should now be set up and able to run the tool.
 - Tested on Python 3.10 and 3.11.
 - Tested on Pytorch w. CUDA 12.1.
 
+> [!CAUTION]
+> joy-caption requires a lot of VRAM. Make sure to turn on LOW_VRAM_MODE if you are below 24gb VRAM on your GPU.
+
 # Example
 ![put_images_here](https://github.com/user-attachments/assets/a24251e5-6df6-44d4-a231-b74da9fcd8ca)
 ```
@@ -38,7 +41,7 @@ Original app and source on huggingface: [https://huggingface.co/spaces/fancyfeas
 
 # Known issues
 ## Not using the right GPU?
-You may need to set the CUDA device to GPU 0 os.environ["CUDA_VISIBLE_DEVICES"] = "0" in the code.
+You may need to set the CUDA device to GPU 0 by adding `os.environ["CUDA_VISIBLE_DEVICES"] = "0"` near the start of the code the code.
 
 ## Too slow?
 You may want to run the model in Low VRAM mode: Set `LOW_VRAM_MODE=true` in batch.py
