@@ -95,12 +95,12 @@ image_files = list(INPUT_FOLDER.rglob('*'))
 if not OVERWRITE:
     image_files = [
         image_path for image_path in image_files
-        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp'] and not (image_path.parent / (image_path.stem + ".txt")).exists()
+        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'] and not (image_path.parent / (image_path.stem + ".txt")).exists()
     ]
 else:
     image_files = [
         image_path for image_path in image_files
-        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', 'webp']
+        if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp']
     ]
 
 print(f"Found {len(image_files)} files to process in {INPUT_FOLDER}")
