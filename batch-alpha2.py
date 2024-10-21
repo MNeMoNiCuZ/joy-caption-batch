@@ -32,7 +32,7 @@ def none_or_type(value, desired_type):
 
 # Captioning Options and settings
 # Prompt used for captioning
-PROMPT = "Write a short description of the image. Include information about camera angle. Include information about whether there are JPEG artifacts or not."
+PROMPT = "Please provide a detailed description of the image."
 
 """
 Example prompts
