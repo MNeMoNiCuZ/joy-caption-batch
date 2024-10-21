@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-"""
-Use JoyCaption to caption images.
-"""
 import argparse
 import dataclasses
 import json
