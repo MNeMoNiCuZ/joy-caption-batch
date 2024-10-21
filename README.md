@@ -100,6 +100,7 @@ The following can be added to the prompt to guide the direction
 # Run the original online
 Original app and source on huggingface: [https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha](https://huggingface.co/spaces/fancyfeast/joy-caption-pre-alpha)
 
+Alpha 2 script is based on: [https://github.com/fpgaminer/joycaption/blob/main/scripts/batch-caption.py](https://github.com/fpgaminer/joycaption/blob/main/scripts/batch-caption.py)
 
 # Known issues
 ## Not using the right GPU?
