@@ -105,7 +105,7 @@ TOP_K = 10  # Limits the sampling pool to the top K most likely options at each 
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate.
 
 # Define supported image extensions
-SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif"}
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
 
 # Define default prompt file
 PROMPT_FILE = SCRIPT_DIR / "default_prompts.json"
