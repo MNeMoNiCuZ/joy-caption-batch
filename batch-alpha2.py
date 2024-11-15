@@ -103,6 +103,7 @@ OUTPUT_FOLDER = INPUT_FOLDER
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
 TOP_K = 10  # Limits the sampling pool to the top K most likely options at each step.
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate.
+BATCH_PROCESSING_COUNT = 1  # 24gb VRAM (Nvidia 3090) can handle batch 8.
 
 # Define supported image extensions
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
@@ -229,6 +230,14 @@ parser.add_argument(
     help="Suffix string to append to the generated caption.",
 )
 
+# Add a --batch-processing-count argument to specify batch processing count
+parser.add_argument(
+    "--batch-processing-count",
+    type=int,
+    default=None,
+    help="Batch processing count for processing images.",
+)
+
 PIL.Image.MAX_IMAGE_PIXELS = 933120000  # Suppress Pillow warnings on large images
 
 
@@ -291,6 +300,7 @@ def main():
     assert isinstance(tokenizer, PreTrainedTokenizer) or isinstance(
         tokenizer, PreTrainedTokenizerFast
     ), f"Tokenizer is of type {type(tokenizer)}"
+    
     llava_model = LlavaForConditionalGeneration.from_pretrained(
         args.model, torch_dtype="bfloat16", device_map="auto"
     )
@@ -298,6 +308,9 @@ def main():
 
     # Log image_seq_length for debugging
     logging.debug(f"Image sequence length: {args.image_seq_length}")
+
+    # Use args.batch_processing_count or BATCH_PROCESSING_COUNT
+    batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
 
     dataset = ImageDataset(
         prompts,
@@ -312,7 +325,7 @@ def main():
         num_workers=args.num_workers,
         shuffle=False,
         drop_last=False,
-        batch_size=args.batch_size,
+        batch_size=batch_processing_count,
     )
     end_of_header_id = tokenizer.convert_tokens_to_ids("<|end_header_id|>")
     end_of_turn_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
@@ -464,7 +477,7 @@ class ImageDataset(Dataset):
         # Preprocess image
         try:
             image = Image.open(path)
-            if image.size != (384, 384):
+            if (image.size != (384, 384)):
                 image = image.resize((384, 384), Image.LANCZOS)
             image = image.convert("RGB")
             pixel_values = TVF.pil_to_tensor(image)
@@ -498,7 +511,7 @@ class ImageDataset(Dataset):
         # Repeat the image tokens based on image_seq_length
         input_tokens = []
         for token in convo_tokens:
-            if token == self.image_token_id:
+            if (token == self.image_token_id):
                 input_tokens.extend([self.image_token_id] * self.image_seq_length)
             else:
                 input_tokens.append(token)
