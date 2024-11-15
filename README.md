@@ -7,6 +7,12 @@ Support for an `--img_dir` argument added by [CambridgeComputing](https://github
 
 Pre-Alpha version supports `LOW_VRAM_MODE=true`. This will use a [llama3-8b-bnb-4bit quantized version from unsloth](https://huggingface.co/unsloth/llama-3-8b-bnb-4bit)
 
+## Update - 2024-11-15
+Batch Processing value added. You can now edit the script and choose how many files to process at once.
+- With JoyCaption Alpha 2, on a 3090, you can use a batch count of 8. 21 images went from 3m to 45s.
+- With JoyCaption Prealpha, on a 3090, you can use a batch count of 6. 21 images went from 2m30s to 43s.
+- With JoyCaption Prealpha with **low_vram**, on a 3090, you can use a batch count of 16. 21 images went from 3m6s to 47s.
+
 # Setup
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
 2. (Optional) Create a virtual environment for your setup. Use python 3.9 to 3.11. Do not use 3.12. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
