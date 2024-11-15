@@ -146,88 +146,95 @@ except (torch.nn.modules.module.ModuleAttributeError, _pickle.UnpicklingError):
 
 @spaces.GPU()
 @torch.no_grad()
-def process_image(input_image_path: Path):
+def process_image(input_image_paths: list[Path]):
     torch.cuda.empty_cache()
 
-    # Preprocess image
-    input_image = Image.open(input_image_path).convert("RGB")
-    image = clip_processor(images=input_image, return_tensors='pt').pixel_values
-    image = image.to('cuda')
+    captions = []
 
-    # Tokenize the prompt
-    prompt = tokenizer.encode(VLM_PROMPT, return_tensors='pt', padding=False, truncation=False, add_special_tokens=False)
+    for input_image_path in input_image_paths:
+        # Preprocess image
+        input_image = Image.open(input_image_path).convert("RGB")
+        image = clip_processor(images=input_image, return_tensors='pt').pixel_values
+        image = image.to('cuda')
 
-    # Embed image
-    with torch.amp.autocast_mode.autocast('cuda', enabled=True):
-        vision_outputs = clip_model(pixel_values=image, output_hidden_states=True)
-        image_features = vision_outputs.hidden_states[-2]
-        embedded_images = image_adapter(image_features)
-        embedded_images = embedded_images.to('cuda')
-    
-    # Embed prompt
-    prompt_embeds = text_model.model.embed_tokens(prompt.to('cuda'))
-    assert prompt_embeds.shape == (1, prompt.shape[1], text_model.config.hidden_size), f"Prompt shape is {prompt_embeds.shape}, expected {(1, prompt.shape[1], text_model.config.hidden_size)}"
-    embedded_bos = text_model.model.embed_tokens(torch.tensor([[tokenizer.bos_token_id]], device=text_model.device, dtype=torch.int64))
+        # Tokenize the prompt
+        prompt = tokenizer.encode(VLM_PROMPT, return_tensors='pt', padding=False, truncation=False, add_special_tokens=False)
 
-    # Construct prompts
-    inputs_embeds = torch.cat([
-        embedded_bos.expand(embedded_images.shape[0], -1, -1),
-        embedded_images.to(dtype=embedded_bos.dtype),
-        prompt_embeds.expand(embedded_images.shape[0], -1, -1),
-    ], dim=1)
+        # Embed image
+        with torch.amp.autocast_mode.autocast('cuda', enabled=True):
+            vision_outputs = clip_model(pixel_values=image, output_hidden_states=True)
+            image_features = vision_outputs.hidden_states[-2]
+            embedded_images = image_adapter(image_features)
+            embedded_images = embedded_images.to('cuda')
+        
+        # Embed prompt
+        prompt_embeds = text_model.model.embed_tokens(prompt.to('cuda'))
+        assert prompt_embeds.shape == (1, prompt.shape[1], text_model.config.hidden_size), f"Prompt shape is {prompt_embeds.shape}, expected {(1, prompt.shape[1], text_model.config.hidden_size)}"
+        embedded_bos = text_model.model.embed_tokens(torch.tensor([[tokenizer.bos_token_id]], device=text_model.device, dtype=torch.int64))
 
-    input_ids = torch.cat([
-        torch.tensor([[tokenizer.bos_token_id]], dtype=torch.long),
-        torch.zeros((1, embedded_images.shape[1]), dtype=torch.long),
-        prompt,
-    ], dim=1).to('cuda')
-    attention_mask = torch.ones_like(input_ids)
+        # Construct prompts
+        inputs_embeds = torch.cat([
+            embedded_bos.expand(embedded_images.shape[0], -1, -1),
+            embedded_images.to(dtype=embedded_bos.dtype),
+            prompt_embeds.expand(embedded_images.shape[0], -1, -1),
+        ], dim=1)
 
-    # Generate caption
-    generate_ids = text_model.generate(
-        input_ids, 
-        inputs_embeds=inputs_embeds, 
-        attention_mask=attention_mask, 
-        max_new_tokens=MAX_NEW_TOKENS, 
-        do_sample=True, 
-        top_k=TOP_K, 
-        temperature=TEMPERATURE, 
-        suppress_tokens=None
-    )
+        input_ids = torch.cat([
+            torch.tensor([[tokenizer.bos_token_id]], dtype=torch.long),
+            torch.zeros((1, embedded_images.shape[1]), dtype=torch.long),
+            prompt,
+        ], dim=1).to('cuda')
+        attention_mask = torch.ones_like(input_ids)
 
-    # Trim off the prompt
-    generate_ids = generate_ids[:, input_ids.shape[1]:]
-    if generate_ids[0][-1] == tokenizer.eos_token_id:
-        generate_ids = generate_ids[:, :-1]
+        # Generate caption
+        generate_ids = text_model.generate(
+            input_ids, 
+            inputs_embeds=inputs_embeds, 
+            attention_mask=attention_mask, 
+            max_new_tokens=MAX_NEW_TOKENS, 
+            do_sample=True, 
+            top_k=TOP_K, 
+            temperature=TEMPERATURE, 
+            suppress_tokens=None
+        )
 
-    # Prepend/Append strings to the generated caption
-    caption = f"{PREPEND_STRING}{tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]}{APPEND_STRING}"
+        # Trim off the prompt
+        generate_ids = generate_ids[:, input_ids.shape[1]:]
+        if generate_ids[0][-1] == tokenizer.eos_token_id:
+            generate_ids = generate_ids[:, :-1]
 
-    # Save caption to text file in the same directory as the image
-    output_file_path = input_image_path.parent / (input_image_path.stem + ".txt")
+        # Prepend/Append strings to the generated caption
+        caption = f"{PREPEND_STRING}{tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]}{APPEND_STRING}"
 
-    if output_file_path.exists() and not OVERWRITE:
+        # Save caption to text file in the same directory as the image
+        output_file_path = input_image_path.parent / (input_image_path.stem + ".txt")
+
+        if output_file_path.exists() and not OVERWRITE:
+            if PRINT_CAPTIONING_STATUS:
+                print(f"Skipping {output_file_path} as it already exists.")
+            continue
+
         if PRINT_CAPTIONING_STATUS:
-            print(f"Skipping {output_file_path} as it already exists.")
-        return
+            print(f"Saving caption to {output_file_path}")
+        with open(output_file_path, 'w', encoding='utf-8') as f:
+            f.write(caption.strip())
 
-    if PRINT_CAPTIONING_STATUS:
-        print(f"Saving caption to {output_file_path}")
-    with open(output_file_path, 'w', encoding='utf-8') as f:
-        f.write(caption.strip())
+        if PRINT_CAPTIONS:
+            print(f"Caption for {input_image_path.name}: {caption}")
 
-    if PRINT_CAPTIONS:
-        print(f"Caption for {input_image_path.name}: {caption}")
+        captions.append(caption.strip())
 
-    return caption.strip()
+    return captions
 
 processed = False
 
 # Use tqdm to add a progress bar
-for image_path in tqdm(image_files, desc="Processing images"):
+batch_size = 1  # Default batch size
+for i in range(0, len(image_files), batch_size):
+    batch = image_files[i:i + batch_size]
     if PRINT_CAPTIONING_STATUS:
-        print(f"Found file: {image_path.resolve()}")
-    caption = process_image(image_path)
+        print(f"Processing batch: {batch}")
+    captions = process_image(batch)
     processed = True
 
 if not processed:
