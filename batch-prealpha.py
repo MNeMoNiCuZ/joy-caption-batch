@@ -13,19 +13,20 @@ from huggingface_hub import hf_hub_download
 import requests
 
 # Configuration options
-LOW_VRAM_MODE = False  # Option to switch to a model that uses less VRAM
+LOW_VRAM_MODE = True  # Option to switch to a model that uses less VRAM
 PRINT_CAPTIONS = False  # Option to print captions to the console during inference
 PRINT_CAPTIONING_STATUS = False  # Option to print captioning file status to the console
 OVERWRITE = True  # Option to allow overwriting existing caption files
 PREPEND_STRING = ""  # Prefix string to prepend to the generated caption
 APPEND_STRING = ""  # Suffix string to append to the generated caption
+BATCH_PROCESSING_COUNT = 4  # Number of images to process in a batch
 
 # Specify input and output folder paths
 INPUT_FOLDER = Path(__file__).parent / "input"
 OUTPUT_FOLDER = INPUT_FOLDER
 
 # LLM Settings
-VLM_PROMPT = "A descriptive caption for this image:\n" # Changing this doesn't seem to matter. Help plz?
+VLM_PROMPT = "A descriptive caption for this image:\n"  # Changing this won't change the outputs. It's only here as a template.
 TEMPERATURE = 0.5  # Controls the randomness of predictions. Lower values make the output more focused and deterministic, while higher values increase randomness.
 TOP_K = 10  # Limits the sampling pool to the top K most likely options at each step. A lower value makes the output more deterministic, while a higher value allows more diversity.
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate. This limits the length of the generated text.
@@ -103,7 +104,8 @@ else:
         if image_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp']
     ]
 
-print(f"Found {len(image_files)} files to process in {INPUT_FOLDER}")
+total_images = len(image_files)
+print(f"Found {total_images} files to process.")
 
 if not image_files:
     print("No images to process. Exiting...")
@@ -146,28 +148,30 @@ except (torch.nn.modules.module.ModuleAttributeError, _pickle.UnpicklingError):
 
 @spaces.GPU()
 @torch.no_grad()
-def process_image(input_image_path: Path):
+def process_images_in_batch(batch_paths):
     torch.cuda.empty_cache()
 
-    # Preprocess image
-    input_image = Image.open(input_image_path).convert("RGB")
-    image = clip_processor(images=input_image, return_tensors='pt').pixel_values
-    image = image.to('cuda')
+    # Preprocess images in batch
+    images = []
+    for path in batch_paths:
+        input_image = Image.open(path).convert("RGB")
+        images.append(clip_processor(images=input_image, return_tensors='pt').pixel_values)
+    images = torch.cat(images, dim=0).to('cuda')
 
     # Tokenize the prompt
     prompt = tokenizer.encode(VLM_PROMPT, return_tensors='pt', padding=False, truncation=False, add_special_tokens=False)
 
-    # Embed image
+    # Embed images
     with torch.amp.autocast_mode.autocast('cuda', enabled=True):
-        vision_outputs = clip_model(pixel_values=image, output_hidden_states=True)
+        vision_outputs = clip_model(pixel_values=images, output_hidden_states=True)
         image_features = vision_outputs.hidden_states[-2]
         embedded_images = image_adapter(image_features)
-        embedded_images = embedded_images.to('cuda')
-    
+
     # Embed prompt
     prompt_embeds = text_model.model.embed_tokens(prompt.to('cuda'))
-    assert prompt_embeds.shape == (1, prompt.shape[1], text_model.config.hidden_size), f"Prompt shape is {prompt_embeds.shape}, expected {(1, prompt.shape[1], text_model.config.hidden_size)}"
-    embedded_bos = text_model.model.embed_tokens(torch.tensor([[tokenizer.bos_token_id]], device=text_model.device, dtype=torch.int64))
+    embedded_bos = text_model.model.embed_tokens(
+        torch.tensor([[tokenizer.bos_token_id]], device=text_model.device, dtype=torch.int64)
+    )
 
     # Construct prompts
     inputs_embeds = torch.cat([
@@ -177,61 +181,55 @@ def process_image(input_image_path: Path):
     ], dim=1)
 
     input_ids = torch.cat([
-        torch.tensor([[tokenizer.bos_token_id]], dtype=torch.long),
-        torch.zeros((1, embedded_images.shape[1]), dtype=torch.long),
-        prompt,
+        torch.tensor([[tokenizer.bos_token_id]], dtype=torch.long).expand(len(batch_paths), -1),
+        torch.zeros((len(batch_paths), embedded_images.shape[1]), dtype=torch.long),
+        prompt.expand(len(batch_paths), -1),
     ], dim=1).to('cuda')
     attention_mask = torch.ones_like(input_ids)
 
-    # Generate caption
+    # Generate captions for the batch
     generate_ids = text_model.generate(
-        input_ids, 
-        inputs_embeds=inputs_embeds, 
-        attention_mask=attention_mask, 
-        max_new_tokens=MAX_NEW_TOKENS, 
-        do_sample=True, 
-        top_k=TOP_K, 
-        temperature=TEMPERATURE, 
+        input_ids,
+        inputs_embeds=inputs_embeds,
+        attention_mask=attention_mask,
+        max_new_tokens=MAX_NEW_TOKENS,
+        do_sample=True,
+        top_k=TOP_K,
+        temperature=TEMPERATURE,
         suppress_tokens=None
     )
 
-    # Trim off the prompt
-    generate_ids = generate_ids[:, input_ids.shape[1]:]
-    if generate_ids[0][-1] == tokenizer.eos_token_id:
-        generate_ids = generate_ids[:, :-1]
+    # Process captions
+    captions = []
+    for idx, image_path in enumerate(batch_paths):
+        generated_ids = generate_ids[idx, input_ids.shape[1]:]
+        if generated_ids[-1] == tokenizer.eos_token_id:
+            generated_ids = generated_ids[:-1]
 
-    # Prepend/Append strings to the generated caption
-    caption = f"{PREPEND_STRING}{tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]}{APPEND_STRING}"
+        caption = f"{PREPEND_STRING}{tokenizer.decode(generated_ids, skip_special_tokens=True)}{APPEND_STRING}"
+        captions.append(caption)
 
-    # Save caption to text file in the same directory as the image
-    output_file_path = input_image_path.parent / (input_image_path.stem + ".txt")
+        # Save caption to text file
+        output_file_path = image_path.parent / (image_path.stem + ".txt")
+        with open(output_file_path, 'w') as caption_file:
+            caption_file.write(caption)
+        if PRINT_CAPTIONS:
+            print(f"Caption for {image_path}: {caption}")
 
-    if output_file_path.exists() and not OVERWRITE:
-        if PRINT_CAPTIONING_STATUS:
-            print(f"Skipping {output_file_path} as it already exists.")
-        return
+    return captions
 
-    if PRINT_CAPTIONING_STATUS:
-        print(f"Saving caption to {output_file_path}")
-    with open(output_file_path, 'w', encoding='utf-8') as f:
-        f.write(caption.strip())
+# Process images in batches
+batch_start = 0
+captions_all = []
+with tqdm(total=total_images, unit='image') as pbar:
+    while batch_start < len(image_files):
+        batch_end = min(batch_start + BATCH_PROCESSING_COUNT, len(image_files))
+        batch_paths = image_files[batch_start:batch_end]
+        
+        captions = process_images_in_batch(batch_paths)
+        captions_all.extend(captions)
+        
+        batch_start = batch_end
+        pbar.update(len(batch_paths))
 
-    if PRINT_CAPTIONS:
-        print(f"Caption for {input_image_path.name}: {caption}")
-
-    return caption.strip()
-
-processed = False
-
-# Use tqdm to add a progress bar
-for image_path in tqdm(image_files, desc="Processing images"):
-    if PRINT_CAPTIONING_STATUS:
-        print(f"Found file: {image_path.resolve()}")
-    caption = process_image(image_path)
-    processed = True
-
-if not processed:
-    print("No images processed. Ensure the folder contains supported image formats.")
-
-if __name__ == "__main__":
-    print("Processing all images in the input folder")
+print(f"Finished processing {len(captions_all)} captions.")
