@@ -103,7 +103,7 @@ OUTPUT_FOLDER = INPUT_FOLDER
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
 TOP_K = 10  # Limits the sampling pool to the top K most likely options at each step.
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate.
-BATCH_PROCESSING_COUNT = 1  # Default batch processing count
+BATCH_PROCESSING_COUNT = 1  # 24gb VRAM (Nvidia 3090) can handle batch 8.
 
 # Define supported image extensions
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
@@ -230,13 +230,6 @@ parser.add_argument(
     help="Suffix string to append to the generated caption.",
 )
 
-# Add a --low-vram argument to enable low-VRAM mode
-parser.add_argument(
-    "--low-vram",
-    action="store_true",
-    help="Enable low-VRAM mode for processing images.",
-)
-
 # Add a --batch-processing-count argument to specify batch processing count
 parser.add_argument(
     "--batch-processing-count",
@@ -308,26 +301,13 @@ def main():
         tokenizer, PreTrainedTokenizerFast
     ), f"Tokenizer is of type {type(tokenizer)}"
     
-    # Adjust model loading to use bitsandbytes for low-VRAM mode
-    if args.low_vram:
-        import bitsandbytes as bnb
-        llava_model = LlavaForConditionalGeneration.from_pretrained(
-            args.model, torch_dtype="bfloat16", device_map="auto", load_in_8bit=True
-        )
-        logging.info("Low-VRAM mode enabled.")
-    else:
-        llava_model = LlavaForConditionalGeneration.from_pretrained(
-            args.model, torch_dtype="bfloat16", device_map="auto"
-        )
+    llava_model = LlavaForConditionalGeneration.from_pretrained(
+        args.model, torch_dtype="bfloat16", device_map="auto"
+    )
     assert isinstance(llava_model, LlavaForConditionalGeneration)
 
     # Log image_seq_length for debugging
     logging.debug(f"Image sequence length: {args.image_seq_length}")
-
-    # Update DataLoader to use a smaller batch size in low-VRAM mode
-    batch_size = args.batch_size
-    if args.low_vram:
-        batch_size = max(1, batch_size // 2)  # Reduce batch size by half in low-VRAM mode
 
     # Use args.batch_processing_count or BATCH_PROCESSING_COUNT
     batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
@@ -497,7 +477,7 @@ class ImageDataset(Dataset):
         # Preprocess image
         try:
             image = Image.open(path)
-            if image.size != (384, 384):
+            if (image.size != (384, 384)):
                 image = image.resize((384, 384), Image.LANCZOS)
             image = image.convert("RGB")
             pixel_values = TVF.pil_to_tensor(image)
