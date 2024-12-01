@@ -20,6 +20,8 @@ OVERWRITE = True  # Option to allow overwriting existing caption files
 PREPEND_STRING = ""  # Prefix string to prepend to the generated caption
 APPEND_STRING = ""  # Suffix string to append to the generated caption
 BATCH_PROCESSING_COUNT = 4  # Number of images to process in a batch
+#On a 3090 (24gb vram), you can use a batch count of 6.
+#On a 3090 (24gb vram) with low_vram enabled, you can use a batch count of 16.
 
 # Specify input and output folder paths
 INPUT_FOLDER = Path(__file__).parent / "input"
