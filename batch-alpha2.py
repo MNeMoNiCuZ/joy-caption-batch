@@ -93,6 +93,9 @@ PRINT_CAPTIONING_STATUS = False  # Option to print captioning file status to the
 OVERWRITE = True  # Option to allow overwriting existing caption files
 PREPEND_STRING = ""  # Prefix string to prepend to the generated caption
 APPEND_STRING = ""  # Suffix string to append to the generated caption
+RECURSIVE = True  # Option to process subfolders recursively
+OUTPUT_FORMAT = "txt"  # Output format for caption files (txt, json, etc)
+
 
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
@@ -103,7 +106,7 @@ OUTPUT_FOLDER = INPUT_FOLDER
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
 TOP_K = 10  # Limits the sampling pool to the top K most likely options at each step.
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate.
-BATCH_PROCESSING_COUNT = 1  # 24gb VRAM (Nvidia 3090) can handle batch 8.
+BATCH_PROCESSING_COUNT = 8  # 24gb VRAM (Nvidia 3090) can handle batch 8.
 
 # Define supported image extensions
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
@@ -197,6 +200,19 @@ parser.add_argument(
     default="fancyfeast/llama-joycaption-alpha-two-hf-llava",
     help="Model to use.",
 )
+parser.add_argument(
+    "--recursive",
+    action="store_true",
+    default=RECURSIVE,
+    help="Process images in subfolders recursively.",
+)
+parser.add_argument(
+    "--output-format",
+    type=str,
+    default=OUTPUT_FORMAT,
+    choices=["txt", "json"],
+    help="Output format for caption files.",
+)
 
 # Additional optional parameters from configuration options
 parser.add_argument(
@@ -272,9 +288,13 @@ def main():
 
     # Find the images
     image_paths = find_images(
-        args.glob, args.filelist, args.input_folder, use_default_input
+        args.glob,
+        args.filelist,
+        args.input_folder,
+        use_default_input,
+        args
     )
-
+    
     if len(image_paths) == 0:
         logging.warning(f"No images found in {image_paths}.")
         return
@@ -417,6 +437,12 @@ def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]
 
 def write_caption(image_path: Path, caption: str, args):
     caption_path = image_path.with_suffix(".txt")
+    
+    # Prepare content based on format
+    if args.output_format == "json":
+        content = json.dumps({"caption": caption}, ensure_ascii=False, indent=2)
+    else:
+        content = caption
 
     # Apply PREPEND_STRING and APPEND_STRING
     caption = f"{args.prepend_string}{caption}{args.append_string}"
@@ -440,7 +466,7 @@ def write_caption(image_path: Path, caption: str, args):
 
     try:
         with open(caption_path, mode, encoding="utf-8") as f:
-            f.write(caption)
+            f.write(content)
         if args.print_captioning_status:
             print(f"Caption written to '{caption_path}'")
     except Exception as e:
@@ -630,6 +656,7 @@ def find_images(
     filelist: str | Path | None,
     input_folder_flag: bool,
     use_default_input: bool,
+    args: argparse.Namespace
 ) -> list[Path]:
     paths = []
 
@@ -665,16 +692,24 @@ def find_images(
         elif not INPUT_FOLDER.is_dir():
             logging.error(f"Default input path '{INPUT_FOLDER}' is not a directory.")
         else:
-            input_images = [
-                p
-                for p in INPUT_FOLDER.iterdir()
-                if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            ]
+            # Modified to support recursive search
+            if args.recursive:
+                input_images = [
+                    p for p in INPUT_FOLDER.rglob("*")
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                ]
+            else:
+                input_images = [
+                    p for p in INPUT_FOLDER.iterdir()
+                    if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                ]
+            
             if not input_images:
                 logging.warning(f"No supported image files found in '{INPUT_FOLDER}'.")
             else:
+                search_type = "recursively " if args.recursive else ""
                 logging.info(
-                    f"Adding {len(input_images)} images from the default input folder '{INPUT_FOLDER}'."
+                    f"Adding {len(input_images)} images {search_type}from the input folder '{INPUT_FOLDER}'."
                 )
                 paths.extend(input_images)
 
@@ -685,6 +720,7 @@ def find_images(
     logging.debug(f"Final image paths: {unique_paths}")
 
     return unique_paths
+
 
 
 if __name__ == "__main__":
