@@ -7,6 +7,10 @@ Support for an `--img_dir` argument added by [CambridgeComputing](https://github
 
 Pre-Alpha version supports `LOW_VRAM_MODE=true`. This will use a [llama3-8b-bnb-4bit quantized version from unsloth](https://huggingface.co/unsloth/llama-3-8b-bnb-4bit)
 
+## Update - 2024-12-08
+- Added options for recursive file searches in the input folder.
+- Added options for output caption file extension.
+
 ## Update - 2024-11-15
 Batch Processing value added. You can now edit the script and choose how many files to process at once.
 - With JoyCaption Alpha 2, on a 3090, you can use a batch count of 8. 21 images went from 3m to 45s.
