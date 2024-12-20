@@ -213,6 +213,16 @@ parser.add_argument(
     choices=["txt", "json"],
     help="Output format for caption files.",
 )
+parser.add_argument(
+    "--input-dir",
+    type=str,
+    help=f"Input directory for images. Default: '{INPUT_FOLDER}'",
+)
+parser.add_argument(
+    "--output-dir",
+    type=str,
+    help=f"Output directory for captions. Default: Same as input directory",
+)
 
 # Additional optional parameters from configuration options
 parser.add_argument(
@@ -273,6 +283,17 @@ def main():
     # Parse arguments
     args = parser.parse_args()
     logging.info(f"Arguments: {args}")
+    
+    # Update INPUT_FOLDER and OUTPUT_FOLDER if provided via arguments
+    if args.input_dir:
+        INPUT_FOLDER = Path(args.input_dir)
+        # If output directory not specified, set it to input directory
+        if not args.output_dir:
+            OUTPUT_FOLDER = INPUT_FOLDER
+
+    # Update OUTPUT_FOLDER if provided
+    if args.output_dir:
+        OUTPUT_FOLDER = Path(args.output_dir)
 
     # Determine if any image sources are provided
     image_sources_provided = any([args.glob, args.filelist, args.input_folder])
@@ -436,7 +457,18 @@ def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]
 
 
 def write_caption(image_path: Path, caption: str, args):
-    caption_path = image_path.with_suffix(".txt")
+    # Calculate relative path from INPUT_FOLDER to maintain directory structure
+    try:
+        relative_path = image_path.relative_to(INPUT_FOLDER)
+    except ValueError:
+        # If image_path is not under INPUT_FOLDER, use just the filename
+        relative_path = image_path.name
+
+    # Construct output path using OUTPUT_FOLDER and relative path
+    caption_path = OUTPUT_FOLDER / relative_path.with_suffix(".txt")
+
+    # Create output directory if it doesn't exist
+    caption_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Prepare content based on format
     if args.output_format == "json":
