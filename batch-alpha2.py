@@ -469,15 +469,15 @@ def write_caption(image_path: Path, caption: str, args):
 
     # Create output directory if it doesn't exist
     caption_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Apply PREPEND_STRING and APPEND_STRING
+    caption = f"{args.prepend_string}{caption}{args.append_string}"
     
     # Prepare content based on format
     if args.output_format == "json":
         content = json.dumps({"caption": caption}, ensure_ascii=False, indent=2)
     else:
         content = caption
-
-    # Apply PREPEND_STRING and APPEND_STRING
-    caption = f"{args.prepend_string}{caption}{args.append_string}"
 
     # If PRINT_CAPTIONS is True, print the caption to console
     if args.print_captions:
