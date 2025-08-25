@@ -325,7 +325,7 @@ def main():
     if not args.overwrite:
         # Ignore all images that already have captions
         image_paths = [
-            path for path in image_paths if not Path(path).with_suffix(".txt").exists()
+            path for path in image_paths if not path.with_suffix(".txt").exists()
         ]
         logging.info(
             f"Images to caption after filtering existing captions: {len(image_paths)}"
