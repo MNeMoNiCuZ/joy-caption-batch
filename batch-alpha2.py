@@ -284,6 +284,8 @@ def main():
     args = parser.parse_args()
     logging.info(f"Arguments: {args}")
     
+    global INPUT_FOLDER, OUTPUT_FOLDER
+    
     # Update INPUT_FOLDER and OUTPUT_FOLDER if provided via arguments
     if args.input_dir:
         INPUT_FOLDER = Path(args.input_dir)
@@ -462,7 +464,7 @@ def write_caption(image_path: Path, caption: str, args):
         relative_path = image_path.relative_to(INPUT_FOLDER)
     except ValueError:
         # If image_path is not under INPUT_FOLDER, use just the filename
-        relative_path = image_path.name
+        relative_path = Path(image_path.name)
 
     # Construct output path using OUTPUT_FOLDER and relative path
     caption_path = OUTPUT_FOLDER / relative_path.with_suffix(".txt")
