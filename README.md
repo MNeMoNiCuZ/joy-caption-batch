@@ -18,16 +18,18 @@ Batch Processing value added. You can now edit the script and choose how many fi
 - With JoyCaption Prealpha with **low_vram**, on a 3090, you can use a batch count of 16. 21 images went from 3m6s to 47s.
 
 # Setup
+Make sure to do the following steps in order
 1. Git clone this repository `git clone https://github.com/MNeMoNiCuZ/joy-caption-batch/`
-2. (Optional) Create a virtual environment for your setup. Use python 3.9 to 3.11. Do not use 3.12. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
-3. Run `pip install -r requirements.txt` (this is done automatically with the `venv_create.bat`).
-4. Install [PyTorch with CUDA support](https://pytorch.org/) matching your installed CUDA version. Run `nvcc --version` to find out which CUDA is your default.
+2. (Optional) Create a virtual environment for your setup. Use python 3.12. Feel free to use the `venv_create.bat` for a simple windows setup. Activate your venv.
+3. Install [Cuda 12.8](https://developer.nvidia.com/cuda-12-8-0-download-archive). Make sure your PATH has this as the default CUDA, or set it in the environment manually. Run `nvcc --version` to check your current version.
+4. Install [PyTorch with CUDA support](https://pytorch.org/) for CUDA 12.8. `pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128`.
+5. Run `pip install -r requirements.txt` (this is done automatically with the `venv_create.bat`).
 
 You should now be set up and able to run the tool.
 
 # Requirements
-- Tested on Python 3.10 and 3.11.
-- Tested on Pytorch w. CUDA 12.1.
+- Tested on Python 3.12
+- Tested on Pytorch w. CUDA 12.8.
 
 > [!CAUTION]
 > joy-caption requires a lot of VRAM. Make sure to turn on LOW_VRAM_MODE if you are below 24gb VRAM on your GPU.
@@ -118,3 +120,4 @@ You may need to set the CUDA device to GPU 0 by adding `os.environ["CUDA_VISIBLE
 
 ## Too slow?
 You may want to run the model in Low VRAM mode: Set `LOW_VRAM_MODE=true` in batch.py
+
